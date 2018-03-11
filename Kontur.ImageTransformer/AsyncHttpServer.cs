@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Collections.Concurrent;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
@@ -7,6 +8,7 @@ using System.Text.RegularExpressions;
 using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
+using Kontur.ImageTransformer.DynamicLeakyBucket;
 using Kontur.ImageTransformer.Handlers;
 //using NLog;
 //using NLog.Fluent;
@@ -20,6 +22,7 @@ namespace Kontur.ImageTransformer
         public AsyncHttpServer(Dictionary<string, IRequestHandler> routes) {
            // ServicePointManager.DefaultConnectionLimit = 100;
             listener = new HttpListener();
+            leakyBucket = new LeakyBucket(150, 400, 2000, Environment.ProcessorCount * 10);
             this.routes = routes;
         }
 
@@ -78,16 +81,16 @@ namespace Kontur.ImageTransformer
                 try {
                     if (listener.IsListening) {
                         var context = await listener.GetContextAsync();
+                        var startRequestTimer = new Stopwatch();
+                        startRequestTimer.Start();
 
-                       // HandleContextAsync(context); 1300, 303/sec
-
-                        Task.Run(() => HandleContextAsync(context));
-                        /*new Task(() => {
-                            var e = DateTime.Now;
-                            var g = HandleContextAsync(context);
-                            g.Wait();
-                            Console.WriteLine($"{(DateTime.Now - e).Milliseconds} {(DateTime.Now - e).Milliseconds}");
-                        });*/
+                        if (leakyBucket.Check(GetRecentTime())) {
+                            ThreadPool.UnsafeQueueUserWorkItem((x) => {
+                                var c = HandleContextAsync((HttpListenerContext) x, startRequestTimer);
+                            }, context);
+                        } else {
+                            AbortRequestAsync(context);
+                        }
                     } else
                         Thread.Sleep(0);
                 } catch (ThreadAbortException) {
@@ -99,6 +102,10 @@ namespace Kontur.ImageTransformer
         }
 
         private async Task HandleContextAsync(HttpListenerContext listenerContext) {
+            await HandleContextAsync(listenerContext, new Stopwatch());
+        }
+
+        private async Task HandleContextAsync(HttpListenerContext listenerContext, Stopwatch startRequestTimer) {
             var uri = listenerContext.Request.Url;
             IRequestHandler handler = null;
             var paramsArr = new List<string>();
@@ -123,10 +130,34 @@ namespace Kontur.ImageTransformer
             }
 
             listenerContext.Response.Close();
+            startRequestTimer.Stop();
+            recentEllapsedMs.Enqueue(startRequestTimer.ElapsedMilliseconds);
+        }
+
+        private async Task AbortRequestAsync(HttpListenerContext listenerContext,
+            HttpStatusCode code = HttpStatusCode.ServiceUnavailable) {
+            listenerContext.Response.StatusCode = (int)code;
+            listenerContext.Response.Close();
+        }
+
+        private long GetRecentTime() {
+            long sum = 0;
+            long count = 0;
+            while (!recentEllapsedMs.IsEmpty) {
+                if (recentEllapsedMs.TryDequeue(out long result)) {
+                    sum += result;
+                    count++;
+                }
+            }
+            if (count == 0)
+                return -1;
+            return sum / count;
         }
 
         private readonly HttpListener listener;
+        private readonly ILeakyBucket leakyBucket;
         private readonly Dictionary<string, IRequestHandler> routes;
+        private ConcurrentQueue<long> recentEllapsedMs = new ConcurrentQueue<long>(); 
 
         private Thread listenerThread;
         private bool disposed;

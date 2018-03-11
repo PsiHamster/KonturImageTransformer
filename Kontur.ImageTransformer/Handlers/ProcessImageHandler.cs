@@ -1,6 +1,7 @@
 ﻿using Kontur.ImageTransformer.ImageTransformer;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
@@ -8,6 +9,7 @@ using System.Linq;
 using System.Net;
 using System.Runtime.InteropServices;
 using System.Text;
+using System.Threading;
 using System.Threading.Tasks;
 
 namespace Kontur.ImageTransformer.Handlers {
@@ -25,15 +27,16 @@ namespace Kontur.ImageTransformer.Handlers {
             try {
                 var rectangleCoords = ParseCoords(paramsArr[1]);
                 var transFunc = GetTransformFunction(paramsArr[0], rectangleCoords);
-                var image = await LoadImageAsync(request.InputStream, (int) request.ContentLength64);
 
+                var image = await LoadImageAsync(request.InputStream, (int) request.ContentLength64);
+                
                 if (image == null) {
                     response.StatusCode = (int)HttpStatusCode.BadRequest;
                     return;
                 }
 
                 var resultImage = transFunc(image);
-
+                
                 if (resultImage == null) {
                     response.StatusCode = (int)HttpStatusCode.NoContent;
                 } else {
@@ -42,9 +45,8 @@ namespace Kontur.ImageTransformer.Handlers {
                 }
             } catch (ArgumentException e) {
                 response.StatusCode = (int)HttpStatusCode.BadRequest;
-            } catch (Exception e) {
-                response.StatusCode = (int)HttpStatusCode.InternalServerError;
-                Console.WriteLine(e);
+            } catch (InvalidOperationException e) {
+                response.StatusCode = (int)HttpStatusCode.BadRequest;
             }
         }
 

@@ -47,7 +47,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DynamicLeakyBucket\LeakyBucket.cs" />
     <Compile Include="EntryPoint.cs" />
+    <Compile Include="DynamicLeakyBucket\ILeakyBucket.cs" />
     <Compile Include="Handlers\IRequestHandler.cs" />
     <Compile Include="Handlers\ProcessImageHandler.cs" />
     <Compile Include="ImageTransformer\ITransformer.cs" />
@@ -58,13 +60,6 @@
   </ItemGroup>
   <ItemGroup>
     <None Include="App.config" />
-    <Content Include="NLog.config">
-      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
-      <SubType>Designer</SubType>
-    </Content>
-    <None Include="NLog.xsd">
-      <SubType>Designer</SubType>
-    </None>
     <None Include="packages.config" />
   </ItemGroup>
   <ItemGroup />

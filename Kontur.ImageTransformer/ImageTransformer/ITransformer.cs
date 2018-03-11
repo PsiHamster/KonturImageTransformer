@@ -1,13 +1,6 @@
-﻿using System;
-using System.Collections.Generic;
-using System.Drawing;
-using System.Drawing.Imaging;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+﻿using System.Drawing;
 
-namespace Kontur.ImageTransformer.ImageTransformer
-{
+namespace Kontur.ImageTransformer.ImageTransformer {
     internal  interface ITransformer {
         /// <param name="original">Original image bitmap</param>
         /// <param name="resultCoords">После преобразования изображение произойдет обрезка по переданным координатам</param>
