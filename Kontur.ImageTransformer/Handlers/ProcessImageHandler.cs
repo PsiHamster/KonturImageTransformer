@@ -1,18 +1,13 @@
 ﻿using Kontur.ImageTransformer.ImageTransformer;
 using System;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.Drawing;
 using System.Drawing.Imaging;
 using System.IO;
-using System.Linq;
 using System.Net;
-using System.Runtime.InteropServices;
-using System.Text;
-using System.Threading;
 using System.Threading.Tasks;
 
-namespace Kontur.ImageTransformer.Handlers {
+namespace Kontur.ImageTransformer.Handlers
+{
     internal class ProcessImageHandler : IRequestHandler {
         /// <inheritdoc />
         public async Task HandleAsync(HttpListenerContext context, string[] paramsArr) {

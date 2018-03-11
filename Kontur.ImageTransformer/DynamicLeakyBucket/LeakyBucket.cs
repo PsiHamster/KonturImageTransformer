@@ -8,23 +8,22 @@ namespace Kontur.ImageTransformer.DynamicLeakyBucket
 {
     internal class LeakyBucket : ILeakyBucket {
         /// <inheritdoc />
-        public bool Check(double averageRequestTime = -1) {
+        public bool Check(Tuple<int, double> recentRequestTime) {
+            var averageRequestTime = recentRequestTime.Item2;
 
             var delta = (DateTimeOffset.UtcNow.ToUnixTimeMilliseconds() - lastCheckRequest);
             lastCheckRequest = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
             
-            if(delta > 0)
-                i = Math.Min(bucketSize, i + rps * delta / 1000 );
-
             if (averageRequestTime > maxAvReqTime) {
-                rps = Math.Max(minRps, rps -= averageRequestTime/maxAvReqTime);
+                rps = Math.Max(minRps, rps -= averageRequestTime * recentRequestTime.Item1 / maxAvReqTime / 16);
+            } else if (averageRequestTime > 0 && averageRequestTime < minAvReqTime) {
+                rps += recentRequestTime.Item1 * bucketSize / 16 / rps;
             }
 
+            if (delta > 0)
+                i = Math.Min(bucketSize, i + rps * delta / 1000);
+
             if (i < 1) {
-                if (averageRequestTime > 0 && averageRequestTime < minAvReqTime) {
-                    rps += bucketSize / 2 / rps;
-                    return true;
-                }
                 return false;
             } else {
                 i -= 1;
@@ -39,7 +38,7 @@ namespace Kontur.ImageTransformer.DynamicLeakyBucket
         /// больше которого начнется урезание токенов.</param>
         /// <param name="bucketSize">Максимальное количество токенов в ведре</param>
         /// <param name="minRps">Минимальное количество токенов добавляемое каждую секунду</param>
-        public LeakyBucket(int minAvReqTime = 150, int maxAvReqTime = 500, int bucketSize = 1000, int minRps = 50) {
+        public LeakyBucket(int minAvReqTime = 100, int maxAvReqTime = 200, int bucketSize = 2000, int minRps = 50) {
             this.minAvReqTime = minAvReqTime;
             this.maxAvReqTime = maxAvReqTime;
             this.bucketSize = bucketSize;

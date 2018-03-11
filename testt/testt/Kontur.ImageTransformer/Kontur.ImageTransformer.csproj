@@ -33,6 +33,7 @@
     <ErrorReport>prompt</ErrorReport>
     <WarningLevel>4</WarningLevel>
     <Prefer32Bit>false</Prefer32Bit>
+    <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
   </PropertyGroup>
   <ItemGroup>
     <Reference Include="System" />
@@ -46,7 +47,9 @@
     <Reference Include="System.Xml" />
   </ItemGroup>
   <ItemGroup>
+    <Compile Include="DynamicLeakyBucket\LeakyBucket.cs" />
     <Compile Include="EntryPoint.cs" />
+    <Compile Include="DynamicLeakyBucket\ILeakyBucket.cs" />
     <Compile Include="Handlers\IRequestHandler.cs" />
     <Compile Include="Handlers\ProcessImageHandler.cs" />
     <Compile Include="ImageTransformer\ITransformer.cs" />
