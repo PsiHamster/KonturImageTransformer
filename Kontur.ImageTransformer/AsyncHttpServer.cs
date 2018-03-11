@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
@@ -7,8 +8,8 @@ using System.Net;
 using System.Threading;
 using System.Threading.Tasks;
 using Kontur.ImageTransformer.Handlers;
-using NLog;
-using NLog.Fluent;
+//using NLog;
+//using NLog.Fluent;
 
 namespace Kontur.ImageTransformer
 {
@@ -17,9 +18,9 @@ namespace Kontur.ImageTransformer
     {
 
         public AsyncHttpServer(Dictionary<string, IRequestHandler> routes) {
+           // ServicePointManager.DefaultConnectionLimit = 100;
             listener = new HttpListener();
             this.routes = routes;
-            log = LogManager.GetCurrentClassLogger();
         }
 
         public void Start(string prefix) {
@@ -31,6 +32,8 @@ namespace Kontur.ImageTransformer
                     listener.Prefixes.Add(prefix);
                     listener.Start();
 
+                    listener.TimeoutManager.RequestQueue = TimeSpan.FromMilliseconds(1000);
+
                     listenerThread = new Thread(Listen) {
                         IsBackground = true,
                         Priority = ThreadPriority.Highest
@@ -38,6 +41,7 @@ namespace Kontur.ImageTransformer
                     listenerThread.Start();
 
                     isRunning = true;
+                    Console.WriteLine("Started"); // TODO: NLog
                 }
             }
         }
@@ -68,22 +72,28 @@ namespace Kontur.ImageTransformer
             listener.Close();
         }
 
-        private void Listen() {
+        private async void Listen() {
             while (true)
             {
-                try
-                {
-                    if (listener.IsListening)
-                    {
-                        var context = listener.GetContext();
+                try {
+                    if (listener.IsListening) {
+                        var context = await listener.GetContextAsync();
+
+                       // HandleContextAsync(context); 1300, 303/sec
+
                         Task.Run(() => HandleContextAsync(context));
+                        /*new Task(() => {
+                            var e = DateTime.Now;
+                            var g = HandleContextAsync(context);
+                            g.Wait();
+                            Console.WriteLine($"{(DateTime.Now - e).Milliseconds} {(DateTime.Now - e).Milliseconds}");
+                        });*/
                     } else
                         Thread.Sleep(0);
-                } catch (ThreadAbortException)
-                {
+                } catch (ThreadAbortException) {
                     return;
                 } catch (Exception e) {
-                    log.Error(e);
+                    Console.WriteLine(e);
                 }
             }
         }
@@ -91,12 +101,13 @@ namespace Kontur.ImageTransformer
         private async Task HandleContextAsync(HttpListenerContext listenerContext) {
             var uri = listenerContext.Request.Url;
             IRequestHandler handler = null;
-            string paramsString = string.Empty;
+            var paramsArr = new List<string>();
+
             foreach (var e in routes) {
                 if (uri.AbsolutePath.ToLower().StartsWith(e.Key)) {
                     handler = e.Value;
-                    paramsString = uri.AbsolutePath.Substring(e.Key.Length + 1, // e.Key == "params", cutting "params/"
-                        uri.AbsolutePath.Length - e.Key.Length - 1);
+                    paramsArr = uri.AbsolutePath.Substring(e.Key.Length + 1, // e.Key == "params", cutting "params/"
+                        uri.AbsolutePath.Length - e.Key.Length - 1).Split('/').Where(x => x!=string.Empty).ToList();
                 }
             }
 
@@ -104,9 +115,9 @@ namespace Kontur.ImageTransformer
                 listenerContext.Response.StatusCode = (int) HttpStatusCode.NotFound;
             } else {
                 try {
-                    await handler.HandleAsync(listenerContext, paramsString);
+                    await handler.HandleAsync(listenerContext, paramsArr.ToArray());
                 } catch (Exception e) {
-                    log.Error(e);
+                    Console.WriteLine(e);
                     listenerContext.Response.StatusCode = (int) HttpStatusCode.InternalServerError;
                 }
             }
@@ -115,8 +126,7 @@ namespace Kontur.ImageTransformer
         }
 
         private readonly HttpListener listener;
-        private Dictionary<string, IRequestHandler> routes;
-        private Logger log;
+        private readonly Dictionary<string, IRequestHandler> routes;
 
         private Thread listenerThread;
         private bool disposed;

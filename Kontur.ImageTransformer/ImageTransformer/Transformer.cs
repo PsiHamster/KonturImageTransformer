@@ -24,10 +24,10 @@ namespace Kontur.ImageTransformer.ImageTransformer
 
             switch (dir) {
                 case RotateDirection.Left:
-                    original.RotateFlip(RotateFlipType.Rotate90FlipNone);
+                    original.RotateFlip(RotateFlipType.Rotate270FlipNone);
                     break;
                 case RotateDirection.Right:
-                    original.RotateFlip(RotateFlipType.Rotate270FlipNone);
+                    original.RotateFlip(RotateFlipType.Rotate90FlipNone);
                     break;
             }
 
@@ -51,10 +51,10 @@ namespace Kontur.ImageTransformer.ImageTransformer
 
             switch (dir) {
                 case FlipDirection.Horizontal:
-                    original.RotateFlip(RotateFlipType.RotateNoneFlipY);
+                    original.RotateFlip(RotateFlipType.RotateNoneFlipX);
                     break;
                 case FlipDirection.Vertical:
-                    original.RotateFlip(RotateFlipType.RotateNoneFlipX);
+                    original.RotateFlip(RotateFlipType.RotateNoneFlipY);
                     break;
                 default:
                     throw new ArgumentException("Invalid Flip direction");

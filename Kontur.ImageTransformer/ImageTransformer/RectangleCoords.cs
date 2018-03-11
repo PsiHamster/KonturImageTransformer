@@ -37,7 +37,7 @@ namespace Kontur.ImageTransformer.ImageTransformer
         /// <c>true</c>, если пересечение c прямоугольником 0, 0, width, height - не пустой прямоугольник.
         /// </summary>
         public bool IntersectWith(int width, int height) =>
-            X < width && X + width > 0 && height < Y && Y + height > 0;
+            X < width && X + Width > 0 && Y < height && Y + Height > 0;
 
         public RectangleCoords(int x, int y, int width, int height) {
             if (width < 0) {
